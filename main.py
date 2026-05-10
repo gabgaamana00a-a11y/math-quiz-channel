@@ -743,7 +743,7 @@ Rules:
 
 async def create_single_short(topic: str, niche: str,
                                output_dir: str, upload: bool = True,
-                               voice: str = "am_adam",
+                               voice: str = "af_sarah",
                                thumbnail_style: str = "dark",
                                use_veo: bool = False) -> dict:
     # ── sat_quiz: SAT-paper style card pipeline ─────────────────────────────
