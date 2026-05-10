@@ -1,0 +1,24 @@
+# Secrets & credentials (injected via GitHub Secrets in CI)
+.env
+token.json
+credentials.json
+
+# Generated output
+output/
+logs/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Music cache (regenerated at runtime)
+music/*.wav
+music/*.mp3
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

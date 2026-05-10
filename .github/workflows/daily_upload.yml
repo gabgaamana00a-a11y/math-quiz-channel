@@ -1,0 +1,66 @@
+name: Daily Upload — Math Quiz
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+    - cron: '0 13 * * *'
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            fonts-liberation \
+            fonts-freefont-ttf \
+            fontconfig \
+            ffmpeg
+          fc-cache -fv
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Write credentials.json
+        run: echo '${{ secrets.CREDENTIALS_JSON }}' > credentials.json
+
+      - name: Write token.json
+        run: echo '${{ secrets.TOKEN_JSON }}' > token.json
+
+      - name: Write quiz_history.json
+        run: echo '${{ secrets.QUIZ_HISTORY_JSON }}' > quiz_history.json
+
+      - name: Write challenge_counter.json
+        run: echo '${{ secrets.CHALLENGE_COUNTER_JSON }}' > challenge_counter.json
+
+      - name: Run batch upload
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          CHANNEL_NICHE: sat_quiz
+          CHANNEL_COUNT: 3
+        run: python batch.py
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: output-${{ github.run_number }}
+          path: logs/
+          retention-days: 3
