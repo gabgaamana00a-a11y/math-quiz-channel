@@ -2,7 +2,7 @@ name: Daily Upload — Math Quiz
 
 on:
   schedule:
-    - cron: '0 9 * * *'
+    - cron: '0 19 * * *'   # 2pm EST / 11am PST — peak US audience
   workflow_dispatch:
 
 jobs:
