@@ -58,10 +58,17 @@ def _gradient(width, height, style):
 
 
 def _font(name, size):
-    try:
-        return ImageFont.truetype(name, size)
-    except:
-        return ImageFont.load_default()
+    _linux = {
+        "arial.ttf":   "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "arialbd.ttf": "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    }
+    candidates = [name, f"C:/Windows/Fonts/{name}", _linux.get(name, name)]
+    for c in candidates:
+        try:
+            return ImageFont.truetype(c, size)
+        except Exception:
+            pass
+    return ImageFont.load_default()
 
 
 def _draw_top_badge(draw, width):

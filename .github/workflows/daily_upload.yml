@@ -20,6 +20,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             fonts-liberation \
             fonts-freefont-ttf \
+            fonts-dejavu-core \
             fontconfig \
             ffmpeg
           fc-cache -fv
@@ -54,6 +55,7 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           CHANNEL_NICHE: sat_quiz
           CHANNEL_COUNT: 1
+          MPLBACKEND: Agg
         run: python batch.py
 
       - uses: actions/upload-artifact@v4
