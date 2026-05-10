@@ -3,8 +3,6 @@ name: Daily Upload — Math Quiz
 on:
   schedule:
     - cron: '0 9 * * *'
-    - cron: '0 13 * * *'
-    - cron: '0 18 * * *'
   workflow_dispatch:
 
 jobs:
