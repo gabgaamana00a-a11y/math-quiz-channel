@@ -810,6 +810,104 @@ async def create_sat_video(
     return final
 
 
+# ── Math answer verifier ────────────────────────────────────────────────────────
+
+def _verify_sat_answer(data: dict) -> bool:
+    """
+    Attempt to verify that data['options'][data['correct']] actually solves
+    data['math_expr'] using sympy.  Returns True if verified or if we cannot
+    determine correctness (unknown problem type).  Returns False only when we
+    can *positively* show the stated answer is wrong.
+    """
+    import re as _re
+    try:
+        import sympy as _sp
+    except ImportError:
+        return True  # sympy not installed — trust the LLM
+
+    def _strip(s: str) -> str:
+        """Remove LaTeX $...$ wrapper and clean up for sympy."""
+        s = s.strip()
+        s = _re.sub(r'^\$+|\$+$', '', s)
+        # \frac{a}{b}  → (a)/(b)
+        s = _re.sub(r'\\frac\{([^}]+)\}\{([^}]+)\}', r'(\1)/(\2)', s)
+        # \sqrt{a}     → sqrt(a)
+        s = _re.sub(r'\\sqrt\{([^}]+)\}', r'sqrt(\1)', s)
+        s = _re.sub(r'\\sqrt\s+(\w+)', r'sqrt(\1)', s)
+        s = _re.sub(r'\\sqrt\s*(\d+)', r'sqrt(\1)', s)
+        # exponents
+        s = s.replace('^', '**')
+        # clean up misc latex
+        s = _re.sub(r'\\cdot|\\times', '*', s)
+        s = _re.sub(r'\\left|\\right|\\,|\\;|\\!', '', s)
+        s = _re.sub(r'\\text\{[^}]*\}', '', s)
+        s = _re.sub(r'\\[a-zA-Z]+', '', s)
+        s = s.replace('{', '(').replace('}', ')')
+        s = _re.sub(r'\s+', '', s)
+        return s
+
+    math_expr   = data.get("math_expr", "")
+    options     = data.get("options", {})
+    correct_key = data.get("correct", "").strip().upper()
+    opt_latex   = options.get(correct_key, "")
+
+    expr_s = _strip(math_expr)
+    opt_s  = _strip(opt_latex)
+
+    if not expr_s or not opt_s:
+        return True  # nothing to check
+
+    try:
+        # Case 1: expression is an equation (contains =)
+        if '=' in expr_s and '?' not in expr_s:
+            # Try to solve for a single unknown variable
+            lhs_s, rhs_s = expr_s.rsplit('=', 1)
+            try:
+                lhs = _sp.sympify(lhs_s)
+                rhs = _sp.sympify(rhs_s)
+            except Exception:
+                return True
+            free = (lhs - rhs).free_symbols
+            if len(free) != 1:
+                return True  # multi-variable — can't verify
+            var = list(free)[0]
+            try:
+                solutions = _sp.solve(_sp.Eq(lhs, rhs), var)
+            except Exception:
+                return True
+            if not solutions:
+                return True
+            try:
+                opt_val = _sp.sympify(opt_s)
+            except Exception:
+                return True
+            for sol in solutions:
+                if _sp.simplify(sol - opt_val) == 0:
+                    print(f"[verify] ✓ {math_expr} → {sol} matches option {correct_key}={opt_latex}")
+                    return True
+            print(f"[verify] ✗ {math_expr}: sympy got {solutions}, option {correct_key}={opt_latex}")
+            return False
+
+        # Case 2: expression ends with = ? (evaluate)
+        if expr_s.endswith('=?') or expr_s.endswith('='):
+            expr_clean = _re.sub(r'=\??$', '', expr_s)
+            try:
+                val = _sp.sympify(expr_clean)
+                opt_val = _sp.sympify(opt_s)
+                if _sp.simplify(val - opt_val) == 0:
+                    print(f"[verify] ✓ {math_expr} = {val} matches option {correct_key}")
+                    return True
+                print(f"[verify] ✗ {math_expr}: evaluated {val}, option {correct_key}={opt_latex}")
+                return False
+            except Exception:
+                return True
+
+        return True  # can't classify — trust LLM
+    except Exception as e:
+        print(f"[verify] exception (skipping): {e}")
+        return True  # any unexpected error — trust LLM
+
+
 # ── LLM question + teaching script generator ──────────────────────────────────
 
 def generate_sat_question(api_key: str, hook_hint: str = "") -> dict:
@@ -841,6 +939,16 @@ def generate_sat_question(api_key: str, hook_hint: str = "") -> dict:
 
     prompt = f"""You are a viral SAT tutor creating YouTube Shorts for @yoursatcoach style.
 
+⚠️ MATH CORRECTNESS IS MANDATORY. Follow this workflow strictly:
+  1. CHOOSE a problem type (linear equation, radical, quadratic, percent, geometry, etc.)
+  2. SET UP the equation / expression for math_expr
+  3. SOLVE IT YOURSELF step by step — get the real answer
+  4. VERIFY by substituting your answer back into math_expr — it must check out
+  5. CREATE 3 wrong distractor options (common student mistakes)
+  6. THEN fill in the JSON
+
+NEVER pick the answer first and then build the equation around it. NEVER fake math to reach a predetermined option.
+
 Generate a SAT math problem video in EXACTLY this JSON format. No markdown, no extra text.
 
 {{
@@ -848,6 +956,7 @@ Generate a SAT math problem video in EXACTLY this JSON format. No markdown, no e
   "math_expr": "LaTeX in $...$ (e.g. '$\\\\sqrt{{50}} + \\\\sqrt{{8}} = ?$')",
   "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
   "correct": "one of A B C D",
+  "answer_check": "Show substitution proof: e.g. 'Check: sqrt(2·12+1) = sqrt(25) = 5 ✓'",
   "hook_text": "{hook}",
   "q_num": {q_num},
   "wrong_approach": "LaTeX in $...$ showing the COMMON WRONG calculation students do",
@@ -870,8 +979,10 @@ Generate a SAT math problem video in EXACTLY this JSON format. No markdown, no e
 }}
 
 RULES:
-- Genuine SAT-level math (algebra, radicals, exponents, percents, geometry — vary it, NOT always square roots).
-- solution_steps: 3-5 steps. Last step label = 'It's [letter]!' or 'Answer: [letter]'.
+- MATH IS SACRED: options[correct] MUST be the actual algebraic answer to math_expr. Include answer_check proving it.
+- Vary problem types each call: linear equations, systems, quadratics, radicals, percents, geometry, exponents, ratios.
+- solution_steps: 3-5 steps showing REAL algebra. Last step label = 'It's [letter]!' or 'Answer: [letter]'.
+- wrong_approach: Must be a real student mistake (wrong formula, skipped step, arithmetic error), NOT a random value.
 - Most common wrong answer must be one of the options.
 - script: each "text" is plain English, NO LaTeX, no dollar signs. Spell out all math verbally.
 - script style: Gen-Z casual tutor. Use 'radical jail', 'ugly roots', 'smash together', 'booyah', 'silly goose', 'sus', 'Okay.', 'Stop.', 'Wait.' where natural.
@@ -942,6 +1053,12 @@ RULES:
             print(f"[sat] Generated: {data.get('math_expr','')[:60]}")
             print(f"[sat] Script: {len(data.get('script', []))} segments")
             print(f"[sat] Correct: {correct_letter} = {correct_val}")
+
+            # ── Programmatic math verification ────────────────────────────
+            if not _verify_sat_answer(data):
+                print(f"[sat] MATH VERIFICATION FAILED on attempt {attempt+1}, retrying...")
+                continue  # retry the LLM call
+
             return data
         except Exception as e:
             print(f"[sat] generate error (attempt {attempt+1}): {e}")

@@ -369,10 +369,12 @@ def upload_to_youtube(video_path: str, thumbnail_path: str,
         part="snippet,status",
         body={
             "snippet": {
-                "title": f"{title} #shorts"[:100],
-                "description": f"{description}\n\n#shorts #viral",
-                "tags": tags + ["shorts", "viral", "youtubeshorts"],
+                "title": title[:100],
+                "description": description,
+                "tags": tags,
                 "categoryId": "27",
+                "defaultLanguage": "en",
+                "defaultAudioLanguage": "en",
             },
             "status": {
                 "privacyStatus": "public",
@@ -763,28 +765,79 @@ async def create_single_short(topic: str, niche: str,
         }
         if upload:
             hook     = sat_data.get("hook_text", topic)
-            yt_tags  = ["SAT", "SATmath", "SATprep", "mathquiz", "shorts", "viral",
-                        "SATtest", "collegeboard", "testprep", "digitalSAT",
-                        "satquiz", "math", "quiz", "brainteaser", "education"]
-            _SAT_COMMENTS = [
-                "What did YOU pick? \U0001f447 Comment A, B, C, or D below!",
-                "Did you get it right? \U0001f447 Drop your answer below!",
-                "SAT question \u2014 could you solve it in time? \U0001f447",
-                "Comment your answer! \U0001f447 Most students miss this one.",
-                "What was your first instinct? \U0001f447 Comment below!",
-                "Top SAT scorers get this instantly. Did you? \U0001f447",
+            math_expr = sat_data.get("math_expr", "")
+            correct_key = sat_data.get("correct", "A").strip().upper()
+            correct_opt = sat_data.get("options", {}).get(correct_key, "")
+
+            # ── Dynamic tags based on problem type ─────────────────────────
+            yt_tags = [
+                "SAT", "SATmath", "SATprep", "SATtest", "SATquestion",
+                "digitalSAT", "SAT2025", "SATprep2025", "collegeboard",
+                "ACTprep", "PSAT", "testprep", "mathquiz", "mathchallenge",
+                "mathproblem", "mathhelp", "mathtutor", "learnmath",
+                "highschoolmath", "algebra", "brainteaser", "satisfying",
+                "studytok", "studywithme", "schooltok", "quiz",
+                "shorts", "youtubeshorts", "viral", "fyp",
             ]
+            # Add topic-specific tags based on the expression type
+            _expr_lower = (math_expr + " " + hook).lower()
+            if any(k in _expr_lower for k in ("sqrt", "radical", "root")):
+                yt_tags.extend(["radicals", "squareroot", "simplifyradicals"])
+            if any(k in _expr_lower for k in ("frac", "fraction", "ratio")):
+                yt_tags.extend(["fractions", "ratios", "proportion"])
+            if any(k in _expr_lower for k in ("percent", "%", "rate")):
+                yt_tags.extend(["percentages", "percentmath"])
+            if any(k in _expr_lower for k in ("quad", "x^2", "x**2", "parabola")):
+                yt_tags.extend(["quadratic", "quadraticequation"])
+            if any(k in _expr_lower for k in ("triangle", "circle", "area", "geom")):
+                yt_tags.extend(["geometry", "satgeometry"])
+            if any(k in _expr_lower for k in ("system", "simultaneous", "linear")):
+                yt_tags.extend(["linearequations", "systemofequations"])
+            yt_tags = list(dict.fromkeys(yt_tags))[:30]  # dedup, max 30 tags
+
+            # ── Viral title templates ───────────────────────────────────────
+            _TITLE_TEMPLATES = [
+                "SAT Math: {hook}",
+                "Can YOU solve this? {hook}",
+                "SAT Trap: {hook}",
+                "99% Miss This SAT Question 🤯",
+                "This SAT Math Problem Ruins Scores",
+                "Solve This SAT Math Challenge! 🎯",
+                "Most Students Fail This SAT Question",
+            ]
+            import random as _rand
+            _base = random.choice(_TITLE_TEMPLATES).format(hook=hook)
+            yt_title = f"{_base} #shorts"[:100]
+
+            # ── Keyword-rich description ────────────────────────────────────
+            yt_description = (
+                f"{hook}\n\n"
+                "🎯 Can you solve this SAT math problem? Drop your answer in the comments: A, B, C, or D!\n\n"
+                "This is a real-style Digital SAT math question. Master these patterns and you'll "
+                "see 50-100+ point improvements on your SAT score.\n\n"
+                "📚 New SAT math challenge every single day — Subscribe so you never miss one!\n\n"
+                "💬 Comment your answer below and let us know if you got it right!\n\n"
+                "#SAT #SATmath #SATprep #SATtest #SATquestion #digitalSAT #SAT2025 #SATprep2025 "
+                "#collegeboard #testprep #ACTprep #PSAT #mathquiz #mathchallenge #mathproblem "
+                "#mathhelp #mathtutor #learnmath #algebra #brainteaser #studytok #studywithme "
+                "#shorts #youtubeshorts #viral #fyp #quiz #education"
+            )
+
+            # ── Engaging pinned comment ─────────────────────────────────────
+            _SAT_COMMENTS = [
+                f"⬇️ What did YOU pick? Drop A, B, C, or D below!\n\nCorrect answer: {correct_key}. Did you get it?",
+                f"🎯 Comment your answer! Most students miss this one.\n\nCorrect answer is {correct_key} — see if you got it!",
+                f"📚 SAT tip: these types of problems appear 2-3x on every Digital SAT.\nComment your answer: A, B, C, or D? ⬇️",
+                f"👇 Drop A, B, C, or D below — then I'll reply!\nCorrect answer: {correct_key}. How'd you do?",
+                f"💡 If you got {correct_key}, you're already scoring above average on this section!\nComment below ⬇️",
+                f"🔥 Top scorers get this instantly. Did you?\nCorrect answer: {correct_key} — comment if you nailed it! ⬇️",
+            ]
+
             result["url"] = upload_to_youtube(
                 video_path=final_path,
                 thumbnail_path=thumb_path,
-                title=f"{hook} #shorts"[:100],
-                description=(
-                    f"{hook}\n\n"
-                    "New SAT math challenge every day! "
-                    "Subscribe so you never miss one.\n\n"
-                    "#SAT #SATmath #SATprep #mathquiz #shorts #viral "
-                    "#collegeboard #testprep #digitalSAT"
-                ),
+                title=yt_title,
+                description=yt_description,
                 tags=yt_tags,
                 first_comment=random.choice(_SAT_COMMENTS),
             )
