@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 from datetime import datetime, timedelta
-from main import get_topic, create_single_short
+from main import get_topic, create_single_short, _send_telegram
 
 BATCH_CONFIG = {
     "videos_per_day": 3,
@@ -41,14 +41,34 @@ async def run_batch(count: int = 3, niche: str = "sat_quiz",
             results.append(result)
             _save_used_topic(topic)
             print(f"Video {i}/{count} complete!")
+            url = result.get("url") or "(no URL — upload disabled)"
+            _send_telegram(
+                f"✅ <b>Video {i}/{count} uploaded!</b>\n"
+                f"📌 Topic: {topic}\n"
+                f"🔗 {url}"
+            )
             if upload and i < count:
                 print(f"Waiting {delay}s before next upload...")
                 await asyncio.sleep(delay)
         except Exception as e:
             print(f"Video {i} failed: {e}")
             failed.append({"topic": topic, "error": str(e)})
+            _send_telegram(
+                f"❌ <b>Video {i}/{count} FAILED</b>\n"
+                f"📌 Topic: {topic}\n"
+                f"⚠️ Error: {e}"
+            )
     _print_summary(results, failed)
     _save_batch_log(results, failed)
+    # Final Telegram summary
+    lines = [f"📊 <b>Batch complete</b> — {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}"]
+    lines.append(f"✅ {len(results)} uploaded  |  ❌ {len(failed)} failed")
+    for r in results:
+        url = r.get('url', '')
+        lines.append(f"  • {r.get('topic','')[:50]}" + (f"\n    🔗 {url}" if url else ""))
+    for f_ in failed:
+        lines.append(f"  ✗ {f_.get('topic','')[:50]}: {f_.get('error','')[:80]}")
+    _send_telegram("\n".join(lines))
     return results
 
 

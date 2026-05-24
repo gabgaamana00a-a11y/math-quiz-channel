@@ -7,6 +7,24 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _send_telegram(message: str) -> bool:
+    """Send a message to a Telegram bot. Returns True on success."""
+    token   = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+    if not token or not chat_id:
+        return False
+    try:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": message, "parse_mode": "HTML"},
+            timeout=15,
+        )
+        return resp.ok
+    except Exception as e:
+        print(f"[telegram] Failed to send notification: {e}")
+        return False
+
 # Niche → best Pexels search keywords (multiple fallbacks per niche)
 NICHE_KEYWORDS = {
     "finance":        ["money", "business", "office", "city", "banking"],
