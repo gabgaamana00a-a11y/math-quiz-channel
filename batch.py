@@ -42,8 +42,10 @@ async def run_batch(count: int = 3, niche: str = "sat_quiz",
             _save_used_topic(topic)
             print(f"Video {i}/{count} complete!")
             url = result.get("url") or "(no URL — upload disabled)"
+            _repo = os.getenv("GITHUB_REPOSITORY", "gabgaamana00a-a11y/math-quiz-channel")
             _send_telegram(
                 f"✅ <b>Video {i}/{count} uploaded!</b>\n"
+                f"🗂 Repo: <code>{_repo}</code>\n"
                 f"📌 Topic: {topic}\n"
                 f"🔗 {url}"
             )
@@ -53,15 +55,18 @@ async def run_batch(count: int = 3, niche: str = "sat_quiz",
         except Exception as e:
             print(f"Video {i} failed: {e}")
             failed.append({"topic": topic, "error": str(e)})
+            _repo = os.getenv("GITHUB_REPOSITORY", "gabgaamana00a-a11y/math-quiz-channel")
             _send_telegram(
                 f"❌ <b>Video {i}/{count} FAILED</b>\n"
+                f"🗂 Repo: <code>{_repo}</code>\n"
                 f"📌 Topic: {topic}\n"
                 f"⚠️ Error: {e}"
             )
     _print_summary(results, failed)
     _save_batch_log(results, failed)
     # Final Telegram summary
-    lines = [f"📊 <b>Batch complete</b> — {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}"]
+    _repo = os.getenv("GITHUB_REPOSITORY", "gabgaamana00a-a11y/math-quiz-channel")
+    lines = [f"📊 <b>Batch complete</b> — {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}\n🗂 Repo: <code>{_repo}</code>"]
     lines.append(f"✅ {len(results)} uploaded  |  ❌ {len(failed)} failed")
     for r in results:
         url = r.get('url', '')
