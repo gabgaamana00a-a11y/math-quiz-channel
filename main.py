@@ -417,11 +417,16 @@ def upload_to_youtube(video_path: str, thumbnail_path: str,
     response = insert_request.execute()
     video_id = response["id"]
     if thumbnail_path and os.path.exists(thumbnail_path):
-        print("Uploading thumbnail...")
-        youtube.thumbnails().set(
-            videoId=video_id,
-            media_body=MediaFileUpload(thumbnail_path)
-        ).execute()
+        try:
+            print("Uploading thumbnail...")
+            youtube.thumbnails().set(
+                videoId=video_id,
+                media_body=MediaFileUpload(thumbnail_path)
+            ).execute()
+            print("[yt] Thumbnail set.")
+        except Exception as e:
+            # Channel may not be thumbnail-eligible yet — the video is already live.
+            print(f"[yt] Thumbnail upload failed (non-fatal): {e}")
     if first_comment:
         import random as _rnd
         import threading as _threading
@@ -849,14 +854,17 @@ async def create_single_short(topic: str, niche: str,
                 tags=yt_tags,
                 first_comment=_rnd.choice(_UK_COMMENTS),
             )
-            # TikTok
+            # TikTok (non-fatal — YouTube is already posted)
             tiktok_caption = post_meta.get("TITLE", topic) + "\n" + post_meta.get("HASHTAGS", "#UKtrivia #quiz #UK")
-            from tiktok_upload import upload_to_tiktok
-            result["tiktok_url"] = upload_to_tiktok(
-                video_path=final_path,
-                caption=tiktok_caption,
-                cookies_path=os.path.join(os.path.dirname(__file__), "tiktok_cookies.json"),
-            )
+            try:
+                from tiktok_upload import upload_to_tiktok
+                result["tiktok_url"] = upload_to_tiktok(
+                    video_path=final_path,
+                    caption=tiktok_caption,
+                    cookies_path=os.path.join(os.path.dirname(__file__), "tiktok_cookies.json"),
+                )
+            except Exception as e:
+                print(f"[yt] TikTok upload failed (non-fatal): {e}")
         return result
 
     # ── sat_quiz: SAT-paper style card pipeline ─────────────────────────────
