@@ -61,7 +61,7 @@ def _load_history() -> dict:
                 return json.load(f)
         except Exception:
             pass
-    return {"questions": []}
+    return {"questions": [], "video_ids": []}
 
 
 def _save_history(history: dict):
@@ -118,6 +118,18 @@ def mark_used(question_text: str):
         _save_history(history)
 
 
+def get_used_video_ids() -> list:
+    return _load_history().get("video_ids", [])
+
+
+def mark_video_used(video_id):
+    """Persist a Pexels video id so background clips are never reused."""
+    history = _load_history()
+    if video_id and video_id not in history.get("video_ids", []):
+        history.setdefault("video_ids", []).append(video_id)
+        _save_history(history)
+
+
 # ── Viral post copy (no LLM — deterministic UK trivia templates) ──────────────
 _UK_TITLES = [
     "How British are you really? 🇬🇧",
@@ -147,8 +159,6 @@ def generate_uk_post_txt(quiz_data: dict, output_dir: str) -> str:
     """Write post.txt (title / description / hashtags) for a UK trivia video."""
     import hashlib as _hl
     question = quiz_data.get("question", "How British are you?")
-    correct = quiz_data.get("correct_answer", "A")
-    answer = quiz_data.get("options", {}).get(correct, "")
     category = quiz_data.get("category", "UK TRIVIA")
     _q_hash = int(_hl.md5(question.encode()).hexdigest(), 16)
     title = _UK_TITLES[_q_hash % len(_UK_TITLES)]
@@ -156,8 +166,7 @@ def generate_uk_post_txt(quiz_data: dict, output_dir: str) -> str:
     description = (
         f"{question}\n\n"
         f"🇬🇧 Test your British knowledge! Drop your answer (A, B, C or D) in the "
-        f"comments before the reveal.\n\n"
-        f"Correct answer: {correct}) {answer}\n"
+        f"comments below.\n\n"
         f"Category: {category}\n\n"
         f"New UK trivia every day — 3 challenges daily. Subscribe so you never miss one!"
     )

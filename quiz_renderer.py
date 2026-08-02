@@ -260,6 +260,7 @@ def draw_quiz_card(
     timer_num:          "int | None"         = None,
     solid_bg:           bool                 = False,
     show_think_overlay: bool                 = False,
+    comment_overlay:    bool                 = False,
     thumbnail_banner:   "str | None"         = None,
     trap_answer:        "str | None"         = None,
     series_num:         "int | None"         = None,
@@ -389,7 +390,7 @@ def draw_quiz_card(
             _cc(d, "SUBSCRIBE FOR DAILY CHALLENGES", W // 2, 1680, f_cta, (15, 15, 15, 255), shadow=False)
 
     # ── Comment bait strip on question card (drives comment engagement → algorithm boost)
-    if not correct and not show_think_overlay and timer_num is None and not thumbnail_banner:
+    if not correct and not show_think_overlay and timer_num is None and not thumbnail_banner and not comment_overlay:
         f_cmt     = _font("arialbd.ttf", 40)
         cmt_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         cd        = ImageDraw.Draw(cmt_layer)
@@ -450,6 +451,19 @@ def draw_quiz_card(
         _cc(d, "THINK",          W // 2, 1570, f_think, (255, 240,  0, 255), shadow=True)
         _cc(d, "CAREFULLY!",     W // 2, 1710, f_think, WHITE,               shadow=True)
         _cc(d, "Lock in your answer...", W // 2, 1840, f_sub, (255, 220, 100, 255), shadow=True)
+
+    # ── "TIME'S UP!" CTA overlay (end card — no answer reveal, drives comments)
+    if comment_overlay:
+        f_tu  = _font("impact.ttf", 120)
+        f_sub = _font("arialbd.ttf", 52)
+        c_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        cl      = ImageDraw.Draw(c_layer)
+        cl.rounded_rectangle([M - 20, 1460, W - M + 20, 1900], radius=25, fill=_t['cta'])
+        canvas  = Image.alpha_composite(canvas, c_layer)
+        d       = ImageDraw.Draw(canvas)
+        _cc(d, "TIME'S UP!", W // 2, 1575, f_tu, (255, 240, 0, 255), shadow=True)
+        _cc(d, "COMMENT YOUR ANSWER", W // 2, 1715, f_sub, WHITE, shadow=True)
+        _cc(d, "Follow for a new UK trivia every day!", W // 2, 1820, f_sub, (255, 220, 100, 255), shadow=True)
 
     # ── Thumbnail banner (drawn on top of everything)
     if thumbnail_banner:
@@ -643,21 +657,36 @@ def _strip_latex(text: str) -> str:
     return text
 
 
-async def _tts(text: str, out_path: str, voice: str = "am_adam", speed: float = 1.05):
-    """Generate speech with Kokoro TTS; falls back to edge-tts on any error."""
+# UK English edge-tts voices (channel targets a UK audience)
+_UK_VOICE_MAP = {
+    "af_sarah":   "en-GB-SoniaNeural",
+    "af_bella":   "en-GB-SoniaNeural",
+    "af_nicole":  "en-GB-SoniaNeural",
+    "af_sky":     "en-GB-SoniaNeural",
+    "am_adam":    "en-GB-RyanNeural",
+    "am_michael": "en-GB-RyanNeural",
+    "am_onyx":    "en-GB-RyanNeural",
+}
+
+
+def _uk_edge_voice(voice: str) -> str:
+    v = (voice or "af_sarah").strip().lower()
+    if v in _UK_VOICE_MAP:
+        return _UK_VOICE_MAP[v]
+    return "en-GB-SoniaNeural" if v.startswith("af_") else "en-GB-RyanNeural"
+
+
+async def _tts(text: str, out_path: str, voice: str = "af_sarah", speed: float = 1.05):
+    """Generate speech with a UK English edge-tts voice (Sonia / Ryan)."""
+    import edge_tts
+    rate = "+10%" if speed > 1.0 else ("-15%" if speed < 1.0 else "+0%")
+    et_voice = _uk_edge_voice(voice)
+    await edge_tts.Communicate(text, et_voice, rate=rate).save(out_path)
     try:
         import soundfile as sf
-        k = _get_kokoro()
-        samples, sr = k.create(text, voice=voice, speed=speed)
-        # Write to WAV; ffmpeg will handle conversion / resampling later
-        sf.write(out_path, samples, sr)
-        print(f"[tts] Kokoro ({voice}): {len(samples)/sr:.1f}s")
-    except Exception as e:
-        print(f"[tts] Kokoro failed ({e}), falling back to edge-tts")
-        import edge_tts
-        # edge-tts voice mapping: prefer en-US-GuyNeural for male
-        et_voice = "en-US-GuyNeural"
-        await edge_tts.Communicate(text, et_voice).save(out_path)
+        print(f"[tts] edge-tts ({et_voice}): {sf.info(out_path).duration:.1f}s")
+    except Exception:
+        pass
 
 def _audio_duration(ffmpeg: str, path: str) -> float:
     out = subprocess.run([ffmpeg, "-i", path], capture_output=True, text=True)
@@ -683,50 +712,30 @@ async def _build_synced_narration(
     question: str, options: dict, correct: str,
     output_dir: str, voice: str,
 ) -> "tuple[float, float]":
-    """Generate TTS in 3 frame-synced parts and concat into narration.wav.
+    """Generate TTS in 4 frame-synced parts and concat into narration.wav.
     - Part 1: question          → q_dur (exact spoken duration)
-    - Part 2: Three/Two/One     → 3.0 s (each word padded to 1.0 s)
-    - Part 3: answer + CTA      → a_dur (exact spoken duration)
+    - Part 2: think pause       → THINK_DUR (1.5 s silence)
+    - Part 3: Three/Two/One     → 3.0 s (each word padded to 1.0 s)
+    - Part 4: comment CTA       → a_dur (exact spoken duration)
+    The answer is NOT revealed — viewers are asked to comment their pick.
     Returns (q_dur, a_dur)."""
     import soundfile as sf
     from imageio_ffmpeg import get_ffmpeg_exe
 
     _CTA_LINES = [
-        "If you got it right, subscribe — you are smarter than 95 percent of people!",
-        "If you solved that, subscribe — only 1 in 20 people get it right!",
-        "Subscribe if you got it! Most people miss this every single time.",
-        "If you answered correctly, hit subscribe — you are in the top 5 percent!",
-        "Got it right? Subscribe now — your brain is above average!",
-        "If you knew that, you are smarter than 9 out of 10 people — subscribe!",
-        "Subscribe if you got it right — only the sharpest minds solve this one!",
-        "If you nailed it, subscribe — most adults get this wrong!",
-        "Got the right answer? Subscribe — you just outsmarted 90 percent of viewers!",
-        "If you solved it, hit subscribe — you just beat the average score!",
-        "If you got it, subscribe! Harvard students even struggle with this one.",
-        "Subscribe if you got it right — you are sharper than most people!",
-        "If you answered correctly, subscribe — your math skills are elite!",
-        "Got it right? You are in the top 5 percent — subscribe for more!",
-        "If you nailed it, subscribe now — most people never get this right!",
-        "Subscribe if you got that! Only 1 in 10 people answer correctly.",
-        "If you got it right, subscribe — you just outsmarted the internet!",
-        "Nailed it? Subscribe — your problem-solving skills are above the curve!",
-        "If you solved that, subscribe — you have a rare mathematical mind!",
-        "Got it right? Subscribe now — only the top percent solve this!",
+        "Time's up! Comment your answer below, and follow for a new UK trivia every day!",
+        "Time's up! Drop your answer in the comments — three new UK quizzes every day!",
+        "Time's up! Tell us your pick in the comments, and follow so you never miss one!",
+        "Time's up! Comment A, B, C or D below — see you on the next UK trivia!",
+        "Time's up! What did you go for? Comment below and follow for your daily UK trivia!",
     ]
     import random as _rnd
     _cta_line = _rnd.choice(_CTA_LINES)
-    answer_text = options.get(correct, "")
-    a_text = (
-        f"The answer is {correct}. {_normalize_tts(answer_text)}! "
-        f"{_cta_line}"
-    )
 
     q_path = os.path.join(output_dir, "_p_q.wav")
     a_path = os.path.join(output_dir, "_p_a.wav")
     await _tts(_normalize_tts(question), q_path, voice=voice)
-    # Female voice on the reveal creates contrast and lifts engagement
-    _reveal_voice = "af_bella" if voice.startswith("am_") else voice
-    await _tts(a_text, a_path, voice=_reveal_voice)
+    await _tts(_cta_line, a_path, voice=voice)
 
     # Countdown: each word padded to exactly 1.0 s — matches the 1.0s video segments for t3/t2/t1
     sr      = sf.info(q_path).samplerate
@@ -908,7 +917,7 @@ def _assemble_pexels_bg(ffmpeg, bg_video, fpaths, audio, music,
         (fpaths["t3"], 1.0),
         (fpaths["t2"], 1.0),
         (fpaths["t1"], 1.0),
-        (fpaths["a"],  a_dur),
+        (fpaths["c"],  a_dur),
     ]
     seg_files = []
     for i, (card_png, dur) in enumerate(segments):
@@ -983,7 +992,7 @@ def _assemble_static(ffmpeg, fpaths, audio, tick, music, q_dur, a_dur, total, fi
         "-loop", "1", "-t", "1.00",         "-i", fpaths["t3"],
         "-loop", "1", "-t", "1.00",         "-i", fpaths["t2"],
         "-loop", "1", "-t", "1.00",         "-i", fpaths["t1"],
-        "-loop", "1", "-t", str(a_dur),     "-i", fpaths["a"],
+        "-loop", "1", "-t", str(a_dur),     "-i", fpaths["c"],
     ]
     vf  = "[0:v][1:v][2:v][3:v][4:v][5:v]concat=n=6:v=1:a=0[cv]"
     enc = ["-c:v", "libx264", "-preset", "fast", "-crf", "16",
@@ -1080,7 +1089,7 @@ async def create_quiz_video(
         ("t3", dict(question=question, options=options, category=category, center_img=center_img, timer_num=3, solid_bg=solid, series_num=series_num)),
         ("t2", dict(question=question, options=options, category=category, center_img=center_img, timer_num=2, solid_bg=solid, series_num=series_num)),
         ("t1", dict(question=question, options=options, category=category, center_img=center_img, timer_num=1, solid_bg=solid, series_num=series_num)),
-        ("a",  dict(question=question, options=options, correct=correct,   category=category, center_img=center_img, solid_bg=solid, trap_answer=trap_answer or None, series_num=series_num)),
+        ("c",  dict(question=question, options=options, category=category, center_img=center_img, comment_overlay=True, solid_bg=solid, series_num=series_num)),
     ]
     fpaths = {}
     for key, kwargs in keys:

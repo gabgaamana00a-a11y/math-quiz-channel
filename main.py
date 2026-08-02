@@ -784,7 +784,8 @@ async def create_single_short(topic: str, niche: str,
     if niche == "uk_trivia":
         from quiz_renderer import create_quiz_video
         from uk_trivia import (get_next_question, get_used_questions,
-                               mark_used, generate_uk_post_txt)
+                               mark_used, generate_uk_post_txt,
+                               get_used_video_ids, mark_video_used)
         os.makedirs(output_dir, exist_ok=True)
         print(f"\n{'='*50}\nUK Trivia: {topic}\n{'='*50}")
         used_q = get_used_questions()
@@ -793,10 +794,12 @@ async def create_single_short(topic: str, niche: str,
             quiz_data, output_dir,
             voice=voice,
             pexels_key=os.getenv("PEXELS_API_KEY", ""),
-            used_video_ids=set(),
+            used_video_ids=set(get_used_video_ids()),
         )
         q_text = quiz_data.get("question", "")
         mark_used(q_text)
+        if vid_id:
+            mark_video_used(vid_id)
         generate_uk_post_txt(quiz_data, output_dir)
         meta = generate_platform_metadata(topic, niche)
         result = {
@@ -831,10 +834,11 @@ async def create_single_short(topic: str, niche: str,
                        + "\n\n" + post_meta.get("HASHTAGS", "#UKtrivia #quiz #UK"))
             yt_tags = [t.lstrip("#") for t in post_meta.get("HASHTAGS", "#UKtrivia #quiz #UK").split() if t.startswith("#")][:20] or ["UKtrivia", "quiz", "UK"]
             _UK_COMMENTS = [
-                f"What did YOU pick? 👇 The answer is {quiz_data['correct_answer']} — did you get it?",
-                f"⬇️ Drop A, B, C or D below! Correct answer: {quiz_data['correct_answer']}.",
-                f"🇬🇧 How British are you? Comment your answer (A, B, C or D) below!",
-                f"Think you know the UK? Comment your answer before the reveal 👇",
+                "What did YOU pick? 👇 Drop A, B, C or D in the comments!",
+                "⬇️ Comment your answer (A, B, C or D) below!",
+                "🇬🇧 How British are you? Comment your answer below!",
+                "Think you know the UK? Comment your pick 👇",
+                "Drop your answer in the comments before time runs out 👇",
             ]
             import random as _rnd
             result["url"] = upload_to_youtube(
