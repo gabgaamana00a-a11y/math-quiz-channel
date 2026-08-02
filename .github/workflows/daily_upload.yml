@@ -1,6 +1,6 @@
 name: Daily Upload — UK Trivia
 
-on:
+"on":
   schedule:
     # 3 UK-friendly posting windows (UTC): ~9am/2pm/7pm BST in summer,
     # ~8am/1pm/6pm GMT in winter. One short per slot = 3 shorts per day.
