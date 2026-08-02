@@ -142,8 +142,23 @@ def _get_next_challenge_num() -> int:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+_FONTS_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+_REPO_FONT = {
+    "impact.ttf":  os.path.join(_FONTS_DIR, "DejaVuSans-Bold.ttf"),
+    "arialbd.ttf": os.path.join(_FONTS_DIR, "DejaVuSans-Bold.ttf"),
+    "arial.ttf":   os.path.join(_FONTS_DIR, "DejaVuSans.ttf"),
+}
+
+
 def _font(name: str, size: int) -> ImageFont.FreeTypeFont:
-    # Windows → Linux fallback map
+    # 1) Bundled open-source fonts (repo fonts/) — consistent everywhere.
+    repo = _REPO_FONT.get(name)
+    if repo and os.path.exists(repo):
+        try:
+            return ImageFont.truetype(repo, size)
+        except Exception:
+            pass
+    # 2) Windows → Linux fallback map
     _fallbacks = {
         "impact.ttf":  ["impact.ttf", "Impact.ttf",
                          "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
@@ -657,7 +672,15 @@ def _strip_latex(text: str) -> str:
     return text
 
 
-# UK English edge-tts voices (channel targets a UK audience)
+# UK English edge-tts voices (channel targets a UK audience) — rotated per video.
+UK_EDGE_VOICES = [
+    "en-GB-SoniaNeural",   # female
+    "en-GB-RyanNeural",    # male
+    "en-GB-LibbyNeural",   # female
+    "en-GB-ThomasNeural",  # male
+    "en-GB-BellaNeural",   # female
+]
+
 _UK_VOICE_MAP = {
     "af_sarah":   "en-GB-SoniaNeural",
     "af_bella":   "en-GB-SoniaNeural",
@@ -669,8 +692,18 @@ _UK_VOICE_MAP = {
 }
 
 
+def pick_uk_voice(voice: str) -> str:
+    """Resolve one British voice for a whole video, rotating for variety."""
+    v = (voice or "").strip()
+    if v.lower().startswith("en-gb"):
+        return v  # caller already chose a UK voice — keep it
+    return random.choice(UK_EDGE_VOICES)
+
+
 def _uk_edge_voice(voice: str) -> str:
     v = (voice or "af_sarah").strip().lower()
+    if v.startswith("en-gb"):
+        return voice
     if v in _UK_VOICE_MAP:
         return _UK_VOICE_MAP[v]
     return "en-GB-SoniaNeural" if v.startswith("af_") else "en-GB-RyanNeural"
@@ -698,7 +731,9 @@ async def _tts(text: str, out_path: str, voice: str = "af_sarah", speed: float =
     except Exception as e:
         print(f"[tts] edge-tts failed ({e}), falling back to Kokoro")
         k = _get_kokoro()
-        samples, sr = k.create(text, voice=voice, speed=speed)
+        # Kokoro has no UK voices — use its female US voice as an emergency only.
+        kv = "am_adam" if (voice or "").lower().startswith("am_") else "af_sarah"
+        samples, sr = k.create(text, voice=kv, speed=speed)
         sf.write(out_path, samples, sr, subtype="PCM_16")
     finally:
         if os.path.exists(tmp):
@@ -1060,6 +1095,8 @@ async def create_quiz_video(
 ) -> "tuple[str, int | None]":
     """Returns (final_path, pexels_video_id_used_or_None)."""
     from imageio_ffmpeg import get_ffmpeg_exe
+
+    voice = pick_uk_voice(voice)   # one British voice per video (rotating)
 
     ffmpeg     = get_ffmpeg_exe()
     os.makedirs(output_dir, exist_ok=True)

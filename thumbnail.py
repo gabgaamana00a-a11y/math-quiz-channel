@@ -57,7 +57,21 @@ def _gradient(width, height, style):
     return img
 
 
+_FONTS_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+_REPO_FONT = {
+    "arial.ttf":   os.path.join(_FONTS_DIR, "DejaVuSans.ttf"),
+    "arialbd.ttf": os.path.join(_FONTS_DIR, "DejaVuSans-Bold.ttf"),
+}
+
+
 def _font(name, size):
+    # 1) Bundled open-source fonts (repo fonts/) — consistent everywhere.
+    repo = _REPO_FONT.get(name)
+    if repo and os.path.exists(repo):
+        try:
+            return ImageFont.truetype(repo, size)
+        except Exception:
+            pass
     _linux = {
         "arial.ttf":   "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
         "arialbd.ttf": "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
