@@ -6,13 +6,13 @@ from main import get_topic, create_single_short, _send_telegram
 
 BATCH_CONFIG = {
     "videos_per_day": 3,
-    "niche": "sat_quiz",
+    "niche": "uk_trivia",
     "upload": True,
     "delay_between": 30,
 }
 
 
-async def run_batch(count: int = 3, niche: str = "sat_quiz",
+async def run_batch(count: int = 3, niche: str = "uk_trivia",
                     upload: bool = True, delay: int = 30):
     print(f"\nBATCH YOUTUBE SHORTS CREATOR")
     print(f"Videos: {count} | Niche: {niche}\n")

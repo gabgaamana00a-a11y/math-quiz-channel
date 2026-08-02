@@ -37,6 +37,7 @@ NICHE_KEYWORDS = {
     "relationships":  ["people", "nature", "city", "sunset", "hands"],
     "math_quiz":      ["mathematics", "chalkboard", "classroom", "numbers", "education"],
     "sat_quiz":       ["mathematics", "exam", "chalkboard", "classroom", "education"],
+    "uk_trivia":      ["london", "big ben", "britain", "uk flag", "city skyline", "london eye"],
 }
 
 
@@ -98,6 +99,18 @@ def get_topic(niche: str = "finance") -> str:
             "This appears easy but almost everyone is wrong",
             "Only the top 5 percent of SAT takers get this",
             "Don't overthink this SAT question — or do",
+        ],
+        "uk_trivia": [
+            "How well do you know the UK",
+            "British geography you should know",
+            "Royal family facts most Brits forget",
+            "Only a true Brit gets this",
+            "UK history everyone should know",
+            "British food and drink trivia",
+            "London landmarks quiz",
+            "UK sports quiz",
+            "British TV and film trivia",
+            "Great British music quiz",
         ],
         "math_quiz": [
             "This question started a fight online",
@@ -474,6 +487,7 @@ def generate_platform_metadata(topic: str, niche: str) -> dict:
             "ai_tools":       ["ai", "chatgpt", "artificialintelligence", "aitools", "tech"],
             "relationships":  ["relationships", "selfimprovement", "psychology", "mindset", "life"],
             "sat_quiz":       ["SAT", "SATmath", "SATprep", "mathquiz", "testprep", "collegeboard", "digitalSAT", "ACT"],
+            "uk_trivia":      ["UKtrivia", "trivia", "quiz", "UK", "British", "britain", "generalknowledge", "london"],
         }.get(niche, [niche, "tips", "howto"])
         base_tags = niche_tags + ["shorts", "viral", "youtubeshorts", "fyp", "trending"]
     short_title = f"{topic} #shorts"[:100]
@@ -766,6 +780,81 @@ async def create_single_short(topic: str, niche: str,
                                voice: str = "af_sarah",
                                thumbnail_style: str = "dark",
                                use_veo: bool = False) -> dict:
+    # ── uk_trivia: CSV-driven UK trivia card pipeline (no repeats) ──────────
+    if niche == "uk_trivia":
+        from quiz_renderer import create_quiz_video
+        from uk_trivia import (get_next_question, get_used_questions,
+                               mark_used, generate_uk_post_txt)
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"\n{'='*50}\nUK Trivia: {topic}\n{'='*50}")
+        used_q = get_used_questions()
+        quiz_data = get_next_question(used_questions=used_q)
+        final_path, vid_id = await create_quiz_video(
+            quiz_data, output_dir,
+            voice=voice,
+            pexels_key=os.getenv("PEXELS_API_KEY", ""),
+            used_video_ids=set(),
+        )
+        q_text = quiz_data.get("question", "")
+        mark_used(q_text)
+        generate_uk_post_txt(quiz_data, output_dir)
+        meta = generate_platform_metadata(topic, niche)
+        result = {
+            "topic": f"{quiz_data.get('category', 'UK TRIVIA')} | {q_text[:40]}",
+            "paths": {
+                "audio":      f"{output_dir}/narration.wav",
+                "srt":        "",
+                "background": "",
+                "base":       "",
+                "captioned":  final_path,
+                "thumbnail":  f"{output_dir}/thumbnail.png",
+                "final":      final_path,
+            },
+            "url":  None,
+            "meta": meta,
+        }
+        if upload:
+            post_meta = {}
+            post_txt = os.path.join(output_dir, "post.txt")
+            if os.path.exists(post_txt):
+                with open(post_txt, encoding="utf-8") as f:
+                    raw = f.read()
+                _sections = {}
+                for block in ["TITLE", "DESCRIPTION", "HASHTAGS"]:
+                    if f"\n{block}\n" in f"\n{raw}":
+                        parts = raw.split(f"{block}\n", 1)
+                        val = parts[1].split("\n\n")[0].strip() if len(parts) > 1 else ""
+                        _sections[block] = val
+                post_meta = _sections
+            yt_title = post_meta.get("TITLE", topic)[:100]
+            yt_desc = (post_meta.get("DESCRIPTION", f"UK trivia: {q_text}")
+                       + "\n\n" + post_meta.get("HASHTAGS", "#UKtrivia #quiz #UK"))
+            yt_tags = [t.lstrip("#") for t in post_meta.get("HASHTAGS", "#UKtrivia #quiz #UK").split() if t.startswith("#")][:20] or ["UKtrivia", "quiz", "UK"]
+            _UK_COMMENTS = [
+                f"What did YOU pick? 👇 The answer is {quiz_data['correct_answer']} — did you get it?",
+                f"⬇️ Drop A, B, C or D below! Correct answer: {quiz_data['correct_answer']}.",
+                f"🇬🇧 How British are you? Comment your answer (A, B, C or D) below!",
+                f"Think you know the UK? Comment your answer before the reveal 👇",
+            ]
+            import random as _rnd
+            result["url"] = upload_to_youtube(
+                video_path=final_path,
+                thumbnail_path=f"{output_dir}/thumbnail.png",
+                title=yt_title,
+                description=yt_desc,
+                tags=yt_tags,
+                first_comment=_rnd.choice(_UK_COMMENTS),
+            )
+            # TikTok
+            tiktok_caption = post_meta.get("TITLE", topic) + "\n" + post_meta.get("HASHTAGS", "#UKtrivia #quiz #UK")
+            from tiktok_upload import upload_to_tiktok
+            result["tiktok_url"] = upload_to_tiktok(
+                video_path=final_path,
+                caption=tiktok_caption,
+                cookies_path=os.path.join(os.path.dirname(__file__), "tiktok_cookies.json"),
+            )
+        return result
+
     # ── sat_quiz: SAT-paper style card pipeline ─────────────────────────────
     if niche == "sat_quiz":
         from sat_renderer import generate_sat_question, create_sat_video
@@ -1025,7 +1114,7 @@ async def create_single_short(topic: str, niche: str,
 
 async def main():
     print("YouTube Shorts Automation\n")
-    NICHE = "sat_quiz"
+    NICHE = "uk_trivia"
     topic = get_topic(NICHE)
     output_dir = f"output/single_{topic[:20].replace(' ', '_')}"
     result = await create_single_short(topic=topic, niche=NICHE,

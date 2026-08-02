@@ -1,9 +1,16 @@
-name: Daily Upload — Math Quiz
+name: Daily Upload — UK Trivia
 
 on:
   schedule:
-    - cron: '0 19 * * *'   # 2pm EST / 11am PST — peak US audience
+    # 3 UK-friendly posting windows (UTC): ~9am/2pm/7pm BST in summer,
+    # ~8am/1pm/6pm GMT in winter. One short per slot = 3 shorts per day.
+    - cron: '0 8 * * *'
+    - cron: '0 13 * * *'
+    - cron: '0 18 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   upload:
@@ -49,16 +56,27 @@ jobs:
       - name: Write challenge_counter.json
         run: echo '${{ secrets.CHALLENGE_COUNTER_JSON }}' > challenge_counter.json
 
-      - name: Run batch upload
+      - name: Write uk_trivia_history.json
+        run: echo '${{ secrets.UK_TRIVIA_HISTORY_JSON || ''{"questions": []}'' }}' > uk_trivia_history.json
+
+      - name: Run batch upload (1 short)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          CHANNEL_NICHE: sat_quiz
+          CHANNEL_NICHE: uk_trivia
           CHANNEL_COUNT: 1
           MPLBACKEND: Agg
         run: python batch.py
+
+      - name: Persist dedup state (no repeats across runs)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- uk_trivia_history.json challenge_counter.json quiz_history.json used_topics.json 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "chore: persist quiz dedup state [skip ci]"
+          git push
 
       - uses: actions/upload-artifact@v4
         if: always()
