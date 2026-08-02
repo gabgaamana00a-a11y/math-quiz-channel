@@ -1,13 +1,11 @@
-name: Daily Upload — UK Trivia
+name: Daily Upload - UK Trivia
 
-"on":
+on:
   schedule:
-    # 3 UK-friendly posting windows (UTC): ~9am/2pm/7pm BST in summer,
-    # ~8am/1pm/6pm GMT in winter. One short per slot = 3 shorts per day.
     - cron: '0 8 * * *'
     - cron: '0 13 * * *'
     - cron: '0 18 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,7 +13,7 @@ permissions:
 jobs:
   upload:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,7 +55,7 @@ jobs:
         run: echo '${{ secrets.CHALLENGE_COUNTER_JSON }}' > challenge_counter.json
 
       - name: Write uk_trivia_history.json
-        run: echo '${{ secrets.UK_TRIVIA_HISTORY_JSON || ''{"questions": []}'' }}' > uk_trivia_history.json
+        run: echo '${{ secrets.UK_TRIVIA_HISTORY_JSON || ''{"questions": [], "video_ids": []}'' }}' > uk_trivia_history.json
 
       - name: Run batch upload (1 short)
         env:
