@@ -677,16 +677,32 @@ def _uk_edge_voice(voice: str) -> str:
 
 
 async def _tts(text: str, out_path: str, voice: str = "af_sarah", speed: float = 1.05):
-    """Generate speech with a UK English edge-tts voice (Sonia / Ryan)."""
+    """Generate speech with a UK English edge-tts voice, output as PCM WAV.
+
+    edge-tts saves MP3 bytes even when the filename ends in .wav, which breaks
+    ffmpeg's concat demuxer (mixed codecs). So we always re-encode to a real
+    PCM WAV via soundfile.
+    """
     import edge_tts
-    rate = "+10%" if speed > 1.0 else ("-15%" if speed < 1.0 else "+0%")
+    import soundfile as sf
     et_voice = _uk_edge_voice(voice)
-    await edge_tts.Communicate(text, et_voice, rate=rate).save(out_path)
+    rate = "+10%" if speed > 1.0 else ("-15%" if speed < 1.0 else "+0%")
+    tmp = out_path + ".mp3"
     try:
-        import soundfile as sf
+        await edge_tts.Communicate(text, et_voice, rate=rate).save(tmp)
+        data, sr = sf.read(tmp, dtype="float32")
+        if data.ndim > 1:
+            data = data[:, 0]
+        sf.write(out_path, data, sr, subtype="PCM_16")
         print(f"[tts] edge-tts ({et_voice}): {sf.info(out_path).duration:.1f}s")
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[tts] edge-tts failed ({e}), falling back to Kokoro")
+        k = _get_kokoro()
+        samples, sr = k.create(text, voice=voice, speed=speed)
+        sf.write(out_path, samples, sr, subtype="PCM_16")
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
 def _audio_duration(ffmpeg: str, path: str) -> float:
     out = subprocess.run([ffmpeg, "-i", path], capture_output=True, text=True)
@@ -741,8 +757,8 @@ async def _build_synced_narration(
     sr      = sf.info(q_path).samplerate
     one_sec = int(1.0 * sr)
     cd_chunks = []
-    for word in ["Three.", "Two.", "One."]:
-        tmp = os.path.join(output_dir, f"_p_{word[0].lower()}.wav")
+    for label, word in [("t3", "Three."), ("t2", "Two."), ("t1", "One.")]:
+        tmp = os.path.join(output_dir, f"_p_{label}.wav")
         await _tts(word, tmp, voice=voice, speed=0.85)
         try:
             data, _ = sf.read(tmp, dtype="float32")
