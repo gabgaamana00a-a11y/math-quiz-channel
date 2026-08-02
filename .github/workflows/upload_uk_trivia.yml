@@ -48,15 +48,6 @@ jobs:
       - name: Write token.json
         run: echo '${{ secrets.TOKEN_JSON }}' > token.json
 
-      - name: Write quiz_history.json
-        run: echo '${{ secrets.QUIZ_HISTORY_JSON }}' > quiz_history.json
-
-      - name: Write challenge_counter.json
-        run: echo '${{ secrets.CHALLENGE_COUNTER_JSON }}' > challenge_counter.json
-
-      - name: Write uk_trivia_history.json
-        run: echo '${{ secrets.UK_TRIVIA_HISTORY_JSON }}' > uk_trivia_history.json
-
       - name: Run batch upload (1 short)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
