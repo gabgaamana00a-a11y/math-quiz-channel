@@ -13,7 +13,6 @@ numpy
 matplotlib
 kokoro-onnx
 soundfile
-tiktok-uploader
 sympy
 
 imageio-ffmpeg

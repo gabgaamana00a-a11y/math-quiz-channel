@@ -154,7 +154,7 @@ _UK_TITLES = [
 _UK_HASHTAGS = ("#UKtrivia #trivia #quiz #UK #British #britain #britishquiz "
                 "#quiztime #generalknowledge #triviatime #funfacts #ukfacts "
                 "#london #england #scotland #wales #northernireland #shorts "
-                "#youtubeshorts #learnontiktok #brainteaser #viral")
+                "#youtubeshorts #brainteaser #viral")
 
 
 def generate_uk_post_txt(quiz_data: dict, output_dir: str) -> str:

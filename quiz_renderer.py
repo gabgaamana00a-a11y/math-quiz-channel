@@ -478,7 +478,7 @@ def draw_quiz_card(
         d       = ImageDraw.Draw(canvas)
         _cc(d, "TIME'S UP!", W // 2, 1575, f_tu, (255, 240, 0, 255), shadow=True)
         _cc(d, "COMMENT YOUR ANSWER", W // 2, 1715, f_sub, WHITE, shadow=True)
-        _cc(d, "Follow for a new UK trivia every day!", W // 2, 1820, f_sub, (255, 220, 100, 255), shadow=True)
+        _cc(d, "Subscribe for a new UK trivia every day!", W // 2, 1820, f_sub, (255, 220, 100, 255), shadow=True)
 
     # ── Thumbnail banner (drawn on top of everything)
     if thumbnail_banner:
@@ -755,7 +755,7 @@ def _build_narration(question: str, options: dict, correct: str) -> str:
         f"{question}  "
         f"Three. Two. One.  "
         f"The answer is {correct}... {answer_text}!  "
-        f"Follow for more math challenges!"
+        f"Subscribe for more math challenges!"
     )
 
 
@@ -774,11 +774,11 @@ async def _build_synced_narration(
     from imageio_ffmpeg import get_ffmpeg_exe
 
     _CTA_LINES = [
-        "Time's up! Comment your answer below, and follow for a new UK trivia every day!",
+        "Time's up! Comment your answer below, and subscribe for a new UK trivia every day!",
         "Time's up! Drop your answer in the comments — three new UK quizzes every day!",
-        "Time's up! Tell us your pick in the comments, and follow so you never miss one!",
+        "Time's up! Tell us your pick in the comments, and subscribe so you never miss one!",
         "Time's up! Comment A, B, C or D below — see you on the next UK trivia!",
-        "Time's up! What did you go for? Comment below and follow for your daily UK trivia!",
+        "Time's up! What did you go for? Comment below and subscribe for your daily UK trivia!",
     ]
     import random as _rnd
     _cta_line = _rnd.choice(_CTA_LINES)

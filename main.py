@@ -498,7 +498,7 @@ def generate_platform_metadata(topic: str, niche: str) -> dict:
     short_title = f"{topic} #shorts"[:100]
     description = (
         f"{topic}\n\n"
-        f"Follow for daily {niche.replace('_', ' ')} tips!\n\n"
+        f"Subscribe for daily {niche.replace('_', ' ')} tips!\n\n"
         + " ".join(f"#{t}" for t in base_tags[:10])
     )
 
@@ -854,17 +854,6 @@ async def create_single_short(topic: str, niche: str,
                 tags=yt_tags,
                 first_comment=_rnd.choice(_UK_COMMENTS),
             )
-            # TikTok (non-fatal — YouTube is already posted)
-            tiktok_caption = post_meta.get("TITLE", topic) + "\n" + post_meta.get("HASHTAGS", "#UKtrivia #quiz #UK")
-            try:
-                from tiktok_upload import upload_to_tiktok
-                result["tiktok_url"] = upload_to_tiktok(
-                    video_path=final_path,
-                    caption=tiktok_caption,
-                    cookies_path=os.path.join(os.path.dirname(__file__), "tiktok_cookies.json"),
-                )
-            except Exception as e:
-                print(f"[yt] TikTok upload failed (non-fatal): {e}")
         return result
 
     # ── sat_quiz: SAT-paper style card pipeline ─────────────────────────────
@@ -1062,14 +1051,6 @@ async def create_single_short(topic: str, niche: str,
                 description=yt_desc,
                 tags=yt_tags,
                 first_comment=first_comment,
-            )
-            # TikTok
-            tiktok_caption = post_meta.get("TITLE", topic) + "\n" + post_meta.get("HASHTAGS", "#mathquiz #shorts #math")
-            from tiktok_upload import upload_to_tiktok
-            result["tiktok_url"] = upload_to_tiktok(
-                video_path=final_path,
-                caption=tiktok_caption,
-                cookies_path=os.path.join(os.path.dirname(__file__), "tiktok_cookies.json"),
             )
         return result
     # ── standard pipeline ─────────────────────────────────────────────────
