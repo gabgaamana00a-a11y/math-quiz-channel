@@ -2,12 +2,13 @@
 uk_trivia.py  —  CSV-driven UK trivia question bank for the quiz card pipeline.
 
 Reads questions from uk_trivia.csv (question + 4 options + correct answer +
-explanation + category) and serves them one at a time WITHOUT repeats using a
-persistent history file (uk_trivia_history.json).
+explanation + category + unique UK-targeted YouTube title) and serves them one
+at a time WITHOUT repeats using a persistent history file
+(uk_trivia_history.json).
 
 Each row is converted into the quiz_data dict expected by
 quiz_renderer.create_quiz_video(), which renders a 1080x1920 short with a
-question card, A-D choices, a 3-2-1 countdown, and a green answer reveal.
+question card, A-D choices, a 3-2-1 countdown, and a comment CTA card.
 """
 import csv
 import json
@@ -19,7 +20,7 @@ CSV_PATH = os.path.join(_HERE, "uk_trivia.csv")
 HISTORY_PATH = os.path.join(_HERE, "uk_trivia_history.json")
 
 _FIELDS = ["question", "option_a", "option_b", "option_c", "option_d",
-           "correct_answer", "explanation", "category"]
+           "correct_answer", "explanation", "category", "title"]
 
 # Pexels photo query for the centre image, per category.
 CATEGORY_IMAGE_QUERY = {
@@ -84,6 +85,7 @@ def build_quiz_data(row: dict) -> dict:
         "correct_answer": (row.get("correct_answer") or "").strip().upper(),
         "explanation":    (row.get("explanation") or "").strip(),
         "category":       category or "UK TRIVIA",
+        "title":          (row.get("title") or "").strip(),
         "image_query":    CATEGORY_IMAGE_QUERY.get(category, _DEFAULT_IMAGE),
         "bg_query":       CATEGORY_BG_QUERY.get(category, _DEFAULT_BG),
     }
@@ -156,12 +158,18 @@ _UK_HASHTAGS = ("#UKtrivia #trivia #quiz #UK #British #britain #britishquiz "
 
 
 def generate_uk_post_txt(quiz_data: dict, output_dir: str) -> str:
-    """Write post.txt (title / description / hashtags) for a UK trivia video."""
+    """Write post.txt (title / description / hashtags) for a UK trivia video.
+
+    Title comes from the per-question CSV `title` column (unique, UK-targeted,
+    high CTR). Falls back to a rotating template if the CSV has no title.
+    """
     import hashlib as _hl
     question = quiz_data.get("question", "How British are you?")
     category = quiz_data.get("category", "UK TRIVIA")
-    _q_hash = int(_hl.md5(question.encode()).hexdigest(), 16)
-    title = _UK_TITLES[_q_hash % len(_UK_TITLES)]
+    title = quiz_data.get("title") or ""
+    if not title:
+        _q_hash = int(_hl.md5(question.encode()).hexdigest(), 16)
+        title = _UK_TITLES[_q_hash % len(_UK_TITLES)]
 
     description = (
         f"{question}\n\n"
