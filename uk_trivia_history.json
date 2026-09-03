@@ -15,7 +15,8 @@
     "Which London street is famous for its department stores and Christmas lights?",
     "Which London venue is the national theatre of the UK?",
     "Which queen reigned the longest before Elizabeth II?",
-    "Which London bridge is painted blue and white and carries the Queen's Jubilee?"
+    "Which London bridge is painted blue and white and carries the Queen's Jubilee?",
+    "Which British explorer was the first to reach the South Pole?"
   ],
   "video_ids": [
     37617051,
@@ -33,6 +34,7 @@
     37344816,
     3206742,
     37617044,
-    38137678
+    38137678,
+    19292131
   ]
 }
