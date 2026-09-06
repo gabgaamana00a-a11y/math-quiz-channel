@@ -24,7 +24,8 @@
     "Who was the manager of England in 1966?",
     "Who is the son of Prince Harry and Meghan?",
     "Which British singer is known for the song Survive?",
-    "Which British singer is known for the song God Only Knows?"
+    "Which British singer is known for the song God Only Knows?",
+    "In which year did the Battle of Hastings take place?"
   ],
   "video_ids": [
     37617051,
@@ -51,6 +52,7 @@
     35988529,
     35265251,
     35323943,
-    35323942
+    35323942,
+    37302375
   ]
 }
