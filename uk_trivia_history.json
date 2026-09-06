@@ -26,7 +26,8 @@
     "Which British singer is known for the song Survive?",
     "Which British singer is known for the song God Only Knows?",
     "In which year did the Battle of Hastings take place?",
-    "Which British band was fronted by Mark Knopfler?"
+    "Which British band was fronted by Mark Knopfler?",
+    "Which British band released the album Outside (1. Outside)?"
   ],
   "video_ids": [
     37617051,
@@ -55,6 +56,7 @@
     35323943,
     35323942,
     37302375,
-    34636825
+    34636825,
+    33540449
   ]
 }
