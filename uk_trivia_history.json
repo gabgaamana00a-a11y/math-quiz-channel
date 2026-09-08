@@ -30,7 +30,8 @@
     "Which British band released the album Outside (1. Outside)?",
     "Which island is the largest in England?",
     "Which London park is the home of the Serpentine and the RHS?",
-    "Who is the Queen's youngest child?"
+    "Who is the Queen's youngest child?",
+    "Which British singer is known for the song The Next Day?"
   ],
   "video_ids": [
     37617051,
@@ -63,6 +64,7 @@
     33540449,
     34466636,
     35320204,
-    31239304
+    31239304,
+    35323935
   ]
 }
