@@ -56,7 +56,8 @@
     "Which British event is the world's largest mass-participation running race?",
     "Which British singer is known for the song Where Are We Now?",
     "What is the British dish of fried leftover vegetables called?",
-    "Which English city is nicknamed the Steel City?"
+    "Which English city is nicknamed the Steel City?",
+    "Which British event is the annual boat race on the River Thames?"
   ],
   "video_ids": [
     37617051,
@@ -113,6 +114,7 @@
     34466875,
     35117249,
     34145271,
-    39010511
+    39010511,
+    32337290
   ]
 }
