@@ -60,7 +60,8 @@
     "Which British event is the annual boat race on the River Thames?",
     "Which royal founded the Prince's Trust?",
     "What is a Yorkshire pudding traditionally made from?",
-    "Which British tennis player won Wimbledon multiple times in the 2010s?"
+    "Which British tennis player won Wimbledon multiple times in the 2010s?",
+    "What is the traditional cake with jam and cream filling named after a queen?"
   ],
   "video_ids": [
     37617051,
@@ -121,6 +122,7 @@
     32337290,
     34732229,
     37585421,
-    34930800
+    34930800,
+    32981477
   ]
 }
