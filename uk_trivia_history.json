@@ -73,7 +73,8 @@
     "Who is the current Queen Camilla?",
     "Which British singer is known for the album Songs of Ascent?",
     "Which London museum is dedicated to modern art and is housed in a former power station?",
-    "Which London district is famous for the Covent Garden Market?"
+    "Which London district is famous for the Covent Garden Market?",
+    "Which London art gallery is on Trafalgar Square?"
   ],
   "video_ids": [
     37617051,
@@ -146,6 +147,7 @@
     39295331,
     39521705,
     32215140,
-    36205708
+    36205708,
+    9935083
   ]
 }
