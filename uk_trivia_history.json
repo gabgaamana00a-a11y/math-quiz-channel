@@ -83,7 +83,8 @@
     "Which London district is home to the famous street of fashion boutiques in Mayfair?",
     "Which British band is fronted by Mick Jagger?",
     "Which British band released the album Days of Future Passed?",
-    "Which British sci-fi comedy is set in a spaceship called Red Dwarf?"
+    "Which British sci-fi comedy is set in a spaceship called Red Dwarf?",
+    "Which British TV show is a cooking competition judged by Paul Hollywood and Prue Leith?"
   ],
   "video_ids": [
     37617051,
@@ -161,6 +162,7 @@
     34201372,
     35817590,
     36588600,
-    7988172
+    7988172,
+    8111742
   ]
 }
