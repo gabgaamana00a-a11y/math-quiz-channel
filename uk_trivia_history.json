@@ -85,7 +85,8 @@
     "Which British band released the album Days of Future Passed?",
     "Which British sci-fi comedy is set in a spaceship called Red Dwarf?",
     "Which British TV show is a cooking competition judged by Paul Hollywood and Prue Leith?",
-    "Which British actor played James Bond in Dr No?"
+    "Which British actor played James Bond in Dr No?",
+    "Which English king was famously killed at the Battle of Bosworth in 1485?"
   ],
   "video_ids": [
     37617051,
@@ -165,6 +166,7 @@
     36588600,
     7988172,
     8111742,
-    8111954
+    8111954,
+    18509266
   ]
 }
