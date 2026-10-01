@@ -96,7 +96,8 @@
     "Which British singer is known for the song Let's Dance?",
     "Which British singer is known for the song Beauty and the Beast?",
     "Which London district is famous for the Southbank Centre?",
-    "Which London park is the venue for the annual Great British Beer Festival?"
+    "Which London park is the venue for the annual Great British Beer Festival?",
+    "Which British captain charted Australia and New Zealand?"
   ],
   "video_ids": [
     37617051,
@@ -181,6 +182,7 @@
     7302883,
     10250961,
     15679698,
-    7722230
+    7722230,
+    39588110
   ]
 }
