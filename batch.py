@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from main import get_topic, create_single_short, _send_telegram
 
 BATCH_CONFIG = {
-    "videos_per_day": 3,
+    "videos_per_day": 1,
     "niche": "math_tricks",
     "upload": True,
     "delay_between": 30,

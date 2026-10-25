@@ -13,9 +13,12 @@ from __future__ import annotations
 
 import asyncio
 import glob
+import json
 import os
 import subprocess
 import sys
+
+SCENE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trick_scene.py")
 
 UK_VOICES = [
     "en-GB-SoniaNeural", "en-GB-RyanNeural", "en-GB-LibbyNeural",
@@ -77,58 +80,31 @@ def _build_narration(spec: dict, outdir: str, voice: str, min_dur: float = 1.3):
         durs.append(len(data) / sr2)
         chunks.append(data)
         os.remove(p)
+    chunks[-1] = np.pad(chunks[-1], (0, int(0.6 * sr)))
+    durs[-1] += 0.6
     narr_path = os.path.join(outdir, "narration.wav")
     sf.write(narr_path, np.concatenate(chunks), sr, subtype="PCM_16")
     return narr_path, durs
 
 
-def _write_scene(scene_path: str, spec: dict, durs: list) -> None:
-    code = f'''from manim import *
-
-config.frame_width = 9.0
-config.frame_height = 16.0
-FONT = "DejaVu Sans"
-
-CATEGORY = {spec["category"]!r}
-HOOK = {spec["hook"]!r}
-STEPS = {spec["steps"]!r}
-RESULT = {spec["result"]!r}
-DURS = {durs!r}
+def _write_spec(path: str, spec: dict, durs: list) -> None:
+    keep = ("type", "args", "hook", "steps", "result", "answer", "category")
+    data = {k: spec[k] for k in keep}
+    data["durs"] = durs
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
 
 
-class TrickScene(Scene):
-    def construct(self):
-        self.camera.background_color = "#0B1533"
-        cat = Text(CATEGORY, font_size=30, color=YELLOW, font=FONT).to_edge(UP, buff=0.6)
-        hook = Text(HOOK, font_size=96, weight=BOLD, color=BLUE_B, font=FONT).move_to(UP * 3.6)
-        self.play(FadeIn(cat, shift=DOWN * 0.3), FadeIn(hook, scale=1.15), run_time=0.5)
-        self.wait(max(0.1, DURS[0] - 0.5))
-
-        n = len(STEPS)
-        top = (n - 1) * 1.15 / 2.0
-        prev = None
-        for i, s in enumerate(STEPS):
-            obj = Text(s, font_size=38, color=WHITE, font=FONT).move_to(UP * (top - i * 1.15))
-            anims = [FadeIn(obj, shift=RIGHT * 0.3)]
-            if prev is not None:
-                anims.append(prev.animate.set_color(GREY_B))
-            self.play(*anims, run_time=0.35)
-            self.wait(max(0.1, DURS[1 + i] - 0.35))
-            prev = obj
-
-        res = Text(RESULT, font_size=64, weight=BOLD, color=GREEN, font=FONT).move_to(DOWN * 6.3)
-        self.play(FadeIn(res, scale=1.15), run_time=0.45)
-        self.wait(max(0.2, DURS[-1] - 0.45 + 0.5))
-'''
-    with open(scene_path, "w", encoding="utf-8") as f:
-        f.write(code)
-
-
-def _render_scene(scene_path: str, media_dir: str) -> str:
-    cmd = [sys.executable, "-m", "manim", "render", "-v", "ERROR",
-           "--disable_caching", "--media_dir", media_dir,
-           "-r", "1080,1920", "--fps", "30", scene_path, "TrickScene"]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+def _render_scene(spec_path: str, media_dir: str, quick: bool = False) -> str:
+    res = ["-r", "540,960", "--fps", "15"] if quick else ["-r", "1080,1920", "--fps", "30"]
+    cmd = [sys.executable, "-m", "manim", "render", "-v", "ERROR", "--disable_caching",
+           "--media_dir", media_dir, *res, SCENE_FILE, "TrickScene"]
+    env = dict(os.environ, TRICK_SPEC=os.path.abspath(spec_path))
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", env=env)
+    for line in (r.stdout or "").splitlines():
+        if line.startswith("[scene]"):
+            print(line)
     if r.returncode != 0:
         raise RuntimeError(f"manim render failed:\n{(r.stderr or r.stdout)[-1500:]}")
     hits = glob.glob(os.path.join(media_dir, "videos", "**", "TrickScene.mp4"), recursive=True)
@@ -151,16 +127,17 @@ def _mux(manim_mp4: str, narration: str, final: str) -> str:
     return final
 
 
-def render_trick(spec: dict, output_dir: str, voice: str | None = None) -> dict:
+def render_trick(spec: dict, output_dir: str, voice: str | None = None,
+                 quick: bool = False) -> dict:
     """Render one trick to {output_dir}/final_trick.mp4. Returns {final, voice, spec}."""
     os.makedirs(output_dir, exist_ok=True)
     voice = pick_voice(voice)
     print(f"[tricks] {spec['hook']}  (voice={voice})")
     narr, durs = _build_narration(spec, output_dir, voice)
-    scene_path = os.path.join(output_dir, "scene.py")
-    _write_scene(scene_path, spec, durs)
+    spec_path = os.path.join(output_dir, "spec.json")
+    _write_spec(spec_path, spec, durs)
     media_dir = os.path.join(output_dir, "media")
-    silent = _render_scene(scene_path, media_dir)
+    silent = _render_scene(spec_path, media_dir, quick)
     final = os.path.join(output_dir, "final_trick.mp4")
     _mux(silent, narr, final)
     print(f"[tricks] done -> {final}")

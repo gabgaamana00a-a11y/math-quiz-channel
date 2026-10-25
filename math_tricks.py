@@ -57,7 +57,7 @@ def _sq5(a: tuple) -> dict:
     n = a[0]
     num = n * 10 + 5
     hi = n * (n + 1)
-    steps = [f"Tens digit: {n}", f"Multiply by the next: {n} × {n + 1} = {hi}",
+    steps = [f"Take the part before the 5: {n}", f"Multiply by the next: {n} × {n + 1} = {hi}",
              f"Stick 25 on the end → {hi}25"]
     return _pack(f"{num}²", steps, num * num, "SQUARE ENDING IN 5")
 
@@ -125,8 +125,10 @@ def _div(a: tuple, k: int) -> dict:
     ds = [int(c) for c in str(n)]
     if k == 11:
         alt = sum(d if i % 2 == 0 else -d for i, d in enumerate(ds))
-        steps = [f"Alternate sum: {' − '.join(str(d) for d in ds)} = {alt}",
-                 f"{alt} is a multiple of 11 — so {n} divides by 11"]
+        expr = str(ds[0]) + "".join(f" {'−' if i % 2 else '+'} {d}" for i, d in enumerate(ds) if i)
+        alt_s = str(alt).replace("-", "−")
+        steps = [f"Alternate sum: {expr} = {alt_s}",
+                 f"{alt_s} is a multiple of 11 — so {n} divides by 11"]
     else:
         s = sum(ds)
         steps = [f"Add the digits: {' + '.join(str(d) for d in ds)} = {s}",
@@ -200,6 +202,8 @@ def build(row: dict) -> dict:
     if _recheck(row["type"], args) != int(spec["answer"]):
         raise ValueError(f"answer mismatch for {row}: {spec['answer']} vs {_recheck(row['type'], args)}")
     spec["title"] = row.get("title", "")
+    spec["type"] = row["type"]
+    spec["args"] = list(args)
     spec["narration"] = [_speak(f"Let's do {spec['hook']}.")] + [_speak(s) for s in spec["steps"]] + \
                         [_speak(f"So the answer is {spec['answer']}.")]
     return spec
