@@ -19,7 +19,7 @@ import sys
 
 UK_VOICES = [
     "en-GB-SoniaNeural", "en-GB-RyanNeural", "en-GB-LibbyNeural",
-    "en-GB-ThomasNeural", "en-GB-BellaNeural",
+    "en-GB-ThomasNeural", "en-GB-MaisieNeural",
 ]
 
 
@@ -46,7 +46,12 @@ def _tts(text: str, out_path: str, voice: str, rate: str = "+6%") -> None:
     import edge_tts
     import soundfile as sf
     tmp = out_path + ".mp3"
-    _run_async(edge_tts.Communicate(text, voice, rate=rate).save(tmp))
+    try:
+        _run_async(edge_tts.Communicate(text, voice, rate=rate).save(tmp))
+    except Exception as e:
+        # A retired/invalid voice must never kill the whole run.
+        print(f"[tricks] TTS fallback ({e}) -> en-GB-SoniaNeural")
+        _run_async(edge_tts.Communicate(text, "en-GB-SoniaNeural", rate=rate).save(tmp))
     data, sr = sf.read(tmp, dtype="float32")
     if data.ndim > 1:
         data = data[:, 0]

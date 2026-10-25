@@ -678,7 +678,7 @@ UK_EDGE_VOICES = [
     "en-GB-RyanNeural",    # male
     "en-GB-LibbyNeural",   # female
     "en-GB-ThomasNeural",  # male
-    "en-GB-BellaNeural",   # female
+    "en-GB-MaisieNeural", # female
 ]
 
 _UK_VOICE_MAP = {
