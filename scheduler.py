@@ -23,7 +23,7 @@ def _default_config():
         "schedules": [
             {
                 "id": "slot_morning",
-                "niche": "uk_trivia",
+                "niche": "math_tricks",
                 "count": 1,
                 "hour": 9,
                 "minute": 0,
@@ -32,7 +32,7 @@ def _default_config():
             },
             {
                 "id": "slot_afternoon",
-                "niche": "uk_trivia",
+                "niche": "math_tricks",
                 "count": 1,
                 "hour": 13,
                 "minute": 0,
@@ -41,7 +41,7 @@ def _default_config():
             },
             {
                 "id": "slot_evening",
-                "niche": "uk_trivia",
+                "niche": "math_tricks",
                 "count": 1,
                 "hour": 18,
                 "minute": 0,

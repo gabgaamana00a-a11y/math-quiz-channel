@@ -22,3 +22,6 @@ music/*.mp3
 # OS
 .DS_Store
 Thumbs.db
+.venv-manim/
+media/
+output/test_manim/

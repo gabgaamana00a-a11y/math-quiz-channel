@@ -6,13 +6,13 @@ from main import get_topic, create_single_short, _send_telegram
 
 BATCH_CONFIG = {
     "videos_per_day": 3,
-    "niche": "uk_trivia",
+    "niche": "math_tricks",
     "upload": True,
     "delay_between": 30,
 }
 
 
-async def run_batch(count: int = 3, niche: str = "uk_trivia",
+async def run_batch(count: int = 3, niche: str = "math_tricks",
                     upload: bool = True, delay: int = 30):
     print(f"\nBATCH YOUTUBE SHORTS CREATOR")
     print(f"Videos: {count} | Niche: {niche}\n")
@@ -20,12 +20,17 @@ async def run_batch(count: int = 3, niche: str = "uk_trivia",
     failed = []
     used_topics = _load_used_topics()
     topics = []
-    for _ in range(count * 3):
-        topic = get_topic(niche)
-        if topic not in used_topics and topic not in topics:
-            topics.append(topic)
-        if len(topics) >= count:
-            break
+    if niche == "math_tricks":
+        # Trick uniqueness lives in math_tricks_history.json, so topics are only
+        # cosmetic labels here — do not filter them (the label pool is small).
+        topics = [get_topic(niche) for _ in range(count)]
+    else:
+        for _ in range(count * 3):
+            topic = get_topic(niche)
+            if topic not in used_topics and topic not in topics:
+                topics.append(topic)
+            if len(topics) >= count:
+                break
     print("Topics for today:")
     for i, t in enumerate(topics, 1):
         print(f"  {i}. {t}")

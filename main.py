@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import asyncio
 import requests
@@ -111,6 +113,18 @@ def get_topic(niche: str = "finance") -> str:
             "UK sports quiz",
             "British TV and film trivia",
             "Great British music quiz",
+        ],
+        "math_tricks": [
+            "This multiplication trick is faster than a calculator",
+            "The 11 times table cheat nobody taught you",
+            "Square any number ending in 5 instantly",
+            "Mental math tricks schools never teach",
+            "Solve this percentage in 2 seconds",
+            "The maths trick that feels illegal",
+            "Stop doing long multiplication by hand",
+            "This trick makes hard maths easy",
+            "Divide by 9 in your head instantly",
+            "The neatest maths shortcut for numbers near 100",
         ],
         "math_quiz": [
             "This question started a fight online",
@@ -785,6 +799,49 @@ async def create_single_short(topic: str, niche: str,
                                voice: str = "af_sarah",
                                thumbnail_style: str = "dark",
                                use_veo: bool = False) -> dict:
+    # ── math_tricks: animated Manim step-by-step trick (no repeats) ─────────
+    if niche == "math_tricks":
+        from math_tricks import (get_next_trick, get_used, mark_used,
+                                 mark_video_used)
+        from math_tricks_renderer import render_trick
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"\n{'='*50}\nMath Trick: {topic}\n{'='*50}")
+        spec = get_next_trick(get_used())
+        out = render_trick(spec, output_dir)
+        final_path = out["final"]
+        mark_used(spec["key"])
+        result = {
+            "topic": f'{spec["category"]} | {spec["hook"]}',
+            "paths": {
+                "audio":     os.path.join(output_dir, "narration.wav"),
+                "final":     final_path,
+                "captioned": final_path,
+                "thumbnail": "",
+            },
+            "url":  None,
+            "meta": {},
+        }
+        if upload:
+            title = (spec.get("title") or f'{spec["hook"]} — easy math trick')[:100]
+            desc = (f'{spec["hook"]}\n\n'
+                    + "\n".join(f"• {s}" for s in spec["steps"])
+                    + f'\n\n✅ {spec["result"]}\n\n'
+                    "Subscribe for a new math trick every day! 🔔\n"
+                    "#maths #mathtricks #mentalmath #mathshorts #gcsemaths")
+            result["url"] = upload_to_youtube(
+                video_path=final_path,
+                thumbnail_path="",
+                title=title,
+                description=desc,
+                tags=["math tricks", "math hacks", "mental math", "maths shorts",
+                      "fast calculation", "math tips", "gcsemaths", "learn maths"],
+                first_comment="Which trick should I do next? Comment below 👇",
+            )
+            vid = (result["url"] or "").rsplit("/", 1)[-1]
+            if vid:
+                mark_video_used(vid)
+        return result
+
     # ── uk_trivia: CSV-driven UK trivia card pipeline (no repeats) ──────────
     if niche == "uk_trivia":
         from quiz_renderer import create_quiz_video
@@ -1107,7 +1164,7 @@ async def create_single_short(topic: str, niche: str,
 
 async def main():
     print("YouTube Shorts Automation\n")
-    NICHE = "uk_trivia"
+    NICHE = "math_tricks"
     topic = get_topic(NICHE)
     output_dir = f"output/single_{topic[:20].replace(' ', '_')}"
     result = await create_single_short(topic=topic, niche=NICHE,
