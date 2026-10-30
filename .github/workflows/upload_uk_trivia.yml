@@ -1,8 +1,9 @@
 name: Daily Upload - Math Tricks
 
 on:
-  schedule:
-    - cron: '0 13 * * *'
+  # PAUSED: daily Shorts off while the channel focuses on long-form. Restore to resume.
+  # schedule:
+  #   - cron: '0 13 * * *'
   workflow_dispatch:
 
 permissions:
